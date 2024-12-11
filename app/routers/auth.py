@@ -6,7 +6,7 @@ from .. import database, schemas, models, utils, oauth2
 
 router = APIRouter(tags=['Authentication'])
 
-@router.post("/login")
+@router.post("/login", response_model=schemas.Token)
 # def login(user_credentials: schemas.UserLogin, db: Session = Depends(database.get_db)): this is theoriginal model the
 # next line is the dependacy modelthis  is because of fastapi
 def login(user_credentials: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
