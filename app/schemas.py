@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, conint
 from datetime import datetime
 from typing import Optional
 
@@ -42,3 +42,20 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     id:Optional[str] = None
+
+
+class Vote(BaseModel):
+    post_id:int 
+    dir: int
+
+class PostBase2(BaseModel):
+    title: str
+    content: str
+    created_at: str
+    updated_at: Optional[str] = None
+
+    class Config:
+        orm_mode = True  # Tells Pydantic to treat SQLAlchemy models as dict-like
+
+class PostWithVotes(PostBase):
+    votes: int  # Include the votes field

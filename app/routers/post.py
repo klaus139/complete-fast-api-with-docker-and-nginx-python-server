@@ -2,6 +2,7 @@ from fastapi import Body, Response, status, HTTPException, Depends, APIRouter, F
 from .. import models,schemas,oauth2
 from typing import List, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from ..database import engine, get_db
 
 
@@ -11,15 +12,44 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[schemas.Post])
-def get_posts(db:Session=Depends(get_db), current_user:int = Depends(oauth2.get_current_user), limit:int = 10, skip:int = 0, search: Optional[str] = ""):
-    #posts = db.query(models.Post).filter(models.Post.owner_id == current_user.id) #this to get current user all posts
-    posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all() #to get all posts in the database regardless of user
+# #@router.get("/", response_model=List[schemas.Post])
+# @router.get("/")
+# def get_posts(db:Session=Depends(get_db), current_user:int = Depends(oauth2.get_current_user), limit:int = 10, skip:int = 0, search: Optional[str] = ""):
+#     #posts = db.query(models.Post).filter(models.Post.owner_id == current_user.id) #this to get current user all posts
+#     posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all() #to get all posts in the database regardless of user
+
+#     #results = db.query(models.Post, func.count(models.Votes.post_id).label("votes")).join(models.Votes, models.Votes.post_id == models.Post.id, isouter=True).group_by(models.Post.id).all()
+
+#     results = db.query(models.Post, func.count(models.Votes.post_id).label("votes"))\
+#     .join(models.Votes, models.Votes.post_id == models.Post.id, isouter=True)\
+#     .group_by(models.Post.id).all()
+
+#     return results
+
     
-    # cursor.execute(""" SELECT * FROM posts """)
-    # posts = cursor.fetchall()
-    # print(posts)
-    return posts
+#     # cursor.execute(""" SELECT * FROM posts """)
+#     # posts = cursor.fetchall()
+#     # print(posts)
+    
+@router.get("/", response_model=List[schemas.PostWithVotes])
+def get_posts(
+    db: Session = Depends(get_db),
+    current_user: int = Depends(oauth2.get_current_user),
+    limit: int = 10,
+    skip: int = 0,
+    search: Optional[str] = ""
+):
+    results = db.query(models.Post, func.count(models.Votes.post_id).label("votes"))\
+        .join(models.Votes, models.Votes.post_id == models.Post.id, isouter=True)\
+        .group_by(models.Post.id).limit(limit).offset(skip).all()
+
+    # Prepare the results in the format that matches the PostWithVotes model
+    return [
+        {"title": post.title, "content": post.content, "created_at": post.created_at, 
+          "votes": vote_count} 
+        for post, vote_count in results
+    ]
+
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
